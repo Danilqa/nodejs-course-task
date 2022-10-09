@@ -3,20 +3,20 @@
 const fs = require('node:fs');
 const util = require('node:util');
 const path = require('node:path');
-
-const COLORS = {
-  info: '\x1b[1;37m',
-  debug: '\x1b[1;33m',
-  error: '\x1b[0;31m',
-  system: '\x1b[1;34m',
-  access: '\x1b[1;38m',
-};
-
-const DATETIME_LENGTH = 19;
+const config = require('config');
 
 class Logger {
-  constructor(logPath) {
+  #LOGGERS = {
+    pino: () => new PinoLogger(),
+    native: () => new NativeLogger()
+  }
+
+  #currentLogger;
+
+  constructor(logPath, type) {
     this.path = logPath;
+    this.#currentLogger = this.#LOGGERS[type]();
+
     const date = new Date().toISOString().substring(0, 10);
     const filePath = path.join(logPath, `${date}.log`);
     this.stream = fs.createWriteStream(filePath, { flags: 'a' });
@@ -27,14 +27,8 @@ class Logger {
     return new Promise((resolve) => this.stream.end(resolve));
   }
 
-  write(type = 'info', s) {
-    const now = new Date().toISOString();
-    const date = now.substring(0, DATETIME_LENGTH);
-    const color = COLORS[type];
-    const line = date + '\t' + s;
-    console.log(color + line + '\x1b[0m');
-    const out = line.replace(/[\n\r]\s*/g, '; ') + '\n';
-    this.stream.write(out);
+  write(type = 'info', message) {
+    this.#currentLogger.log(type, message);
   }
 
   log(...args) {
@@ -68,4 +62,39 @@ class Logger {
   }
 }
 
-module.exports = new Logger('./log');
+class NativeLogger {
+  static #DATETIME_LENGTH = 19;
+
+  static #COLORS = {
+    info: '\x1b[1;37m',
+    debug: '\x1b[1;33m',
+    error: '\x1b[0;31m',
+    system: '\x1b[1;34m',
+    access: '\x1b[1;38m',
+  };
+
+  log(type, message) {
+    const now = new Date().toISOString();
+    const date = now.substring(0, NativeLogger.#DATETIME_LENGTH);
+    const color = NativeLogger.#COLORS[type];
+    const line = date + '\t' + message;
+    console.log(color + line + '\x1b[0m');
+  }
+}
+
+class PinoLogger {
+  #instance;
+
+  constructor() {
+    const pino = require('pino');
+    const pretty = require('pino-pretty');
+
+    this.#instance = pino(pretty());
+  }
+
+  log(type, message) {
+    this.#instance[type](message);
+  }
+}
+
+module.exports = new Logger('./log', config.logger);
