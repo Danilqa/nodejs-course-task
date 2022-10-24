@@ -15,8 +15,8 @@ module.exports = {
     host: '127.0.0.1',
     port: 5432,
     database: 'example',
-    user: 'marcus',
-    password: 'marcus',
+    user: 'postgres',
+    password: 'postgres',
   },
   moduleLoader: {
     timeout: 5000,

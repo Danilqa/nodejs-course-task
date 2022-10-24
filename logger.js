@@ -3,7 +3,7 @@
 const fs = require('node:fs');
 const util = require('node:util');
 const path = require('node:path');
-const config = require('config');
+const config = require('./config.js');
 
 class Logger {
   #LOGGERS = {
